@@ -1,71 +1,11 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import requests
-from bs4 import BeautifulSoup
-import os
-from openai import OpenAI
+from fastapi import FastAPI
 
 app = FastAPI()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-class URLInput(BaseModel):
-    url: str
-
 @app.get("/")
+def home():
+    return {"status": "Backend is running"}
+
+@app.get("/health")
 def health():
-    return {"status": "OK"}
-
-def crawl_page(url):
-    try:
-        r = requests.get(url, timeout=10, headers={
-            "User-Agent": "Mozilla/5.0"
-        })
-        soup = BeautifulSoup(r.text, "html.parser")
-
-        title = soup.title.string if soup.title else ""
-        h1 = soup.find("h1").get_text() if soup.find("h1") else ""
-        text = soup.get_text(separator=" ", strip=True)
-
-        return title, h1, text[:5000]
-    except Exception as e:
-        return "", "", ""
-
-def ask_ai(prompt):
-    try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
-        )
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"AI Error: {str(e)}"
-
-@app.post("/site-audit")
-def site_audit(data: URLInput):
-    if not data.url.startswith("http"):
-        raise HTTPException(status_code=400, detail="Invalid URL")
-
-    title, h1, content = crawl_page(data.url)
-
-    prompt = f"""
-    You are an SEO expert.
-
-    Website URL: {data.url}
-    Page Title: {title}
-    H1: {h1}
-
-    Page Content:
-    {content}
-
-    Tasks:
-    - Identify website niche
-    - Suggest competitors
-    - Optimize meta title, description, and H1
-    - Suggest top pages to optimize
-    - Suggest new pages to create
-    """
-
-    result = ask_ai(prompt)
-    return {"result": result}
+    return {"health": "ok"}
