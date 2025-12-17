@@ -4,12 +4,16 @@ import requests
 from bs4 import BeautifulSoup
 from openai import OpenAI
 
-client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-
 def handler(request):
     try:
-        body = json.loads(request.body)
-        url = body.get("url")
+        # Safely parse body (Vercel-compatible)
+        body = request.get("body")
+        if body:
+            data = json.loads(body)
+        else:
+            data = {}
+
+        url = data.get("url")
 
         if not url:
             return {
@@ -17,12 +21,16 @@ def handler(request):
                 "body": json.dumps({"error": "URL is required"})
             }
 
-        html = requests.get(url, timeout=10).text
-        soup = BeautifulSoup(html, "html.parser")
+        # Fetch webpage
+        response = requests.get(url, timeout=10)
+        soup = BeautifulSoup(response.text, "html.parser")
 
         title = soup.title.string if soup.title else ""
         meta = soup.find("meta", attrs={"name": "description"})
         meta_desc = meta["content"] if meta else ""
+
+        # Create OpenAI client INSIDE handler
+        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
 
         prompt = f"""
         Analyze this webpage SEO:
@@ -33,22 +41,6 @@ def handler(request):
         Give SEO improvements.
         """
 
-        response = client.chat.completions.create(
+        ai_response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}]
-        )
-
-        return {
-            "statusCode": 200,
-            "body": json.dumps({
-                "title": title,
-                "meta_description": meta_desc,
-                "seo_suggestions": response.choices[0].message.content
-            })
-        }
-
-    except Exception as e:
-        return {
-            "statusCode": 500,
-            "body": json.dumps({"error": str(e)})
-        }
