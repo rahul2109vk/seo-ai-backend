@@ -3,25 +3,25 @@ from pydantic import BaseModel
 import requests
 from bs4 import BeautifulSoup
 import os
-from openai import OpenAI
+import openai
+
+# Configure OpenAI (old stable SDK)
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 app = FastAPI()
-
-# OpenAI client (new SDK)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class URLInput(BaseModel):
     url: str
 
 @app.get("/")
 def home():
-    return {"status": "SEO AI Backend running"}
+    return {"status": "SEO AI Backend running (stable)"}
 
 @app.get("/health")
 def health():
     return {"health": "ok"}
 
-def crawl_page(url: str):
+def crawl_page(url):
     try:
         r = requests.get(
             url,
@@ -38,14 +38,14 @@ def crawl_page(url: str):
     except Exception:
         return "", "", ""
 
-def ask_ai(prompt: str):
+def ask_ai(prompt):
     try:
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
-        return response.choices[0].message.content
+        return response["choices"][0]["message"]["content"]
     except Exception as e:
         return f"AI error: {str(e)}"
 
@@ -71,8 +71,3 @@ def site_audit(data: URLInput):
     - Suggest competitors
     - Optimize meta title, description, and H1
     - Suggest top pages to optimize
-    - Suggest new pages to create
-    """
-
-    result = ask_ai(prompt)
-    return {"result": result}
