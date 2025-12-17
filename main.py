@@ -1,35 +1,15 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-import requests
-from bs4 import BeautifulSoup
-import os
-from openai import OpenAI
-
-app = FastAPI()
-
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
-class SiteRequest(BaseModel):
-    domain: str
-
-@app.get("/")
-def home():
-    return {"status": "SEO AI Backend Running"}
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
-
-@app.get("/env-check")
-def env_check():
-    return {
-        "OPENAI_API_KEY": "FOUND" if os.getenv("OPENAI_API_KEY") else "MISSING"
-    }
-
 @app.post("/analyze-site")
 def analyze_site(data: SiteRequest):
-    domain = data.domain.strip()
+    import os
+    from openai import OpenAI
 
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY missing")
+
+    client = OpenAI(api_key=api_key)
+
+    domain = data.domain.strip()
     if not domain.startswith("http"):
         domain = "https://" + domain
 
@@ -52,10 +32,28 @@ def analyze_site(data: SiteRequest):
 You are an SEO expert.
 
 Website URL: {domain}
-Page title: {title}
+Title: {title}
 Meta description: {meta_desc}
-H1 headings: {h1s}
+H1s: {h1s}
 
-1. Identify the website category/niche
-2. Suggest important missing pages
-3. Suggest 5 likely organic
+Return:
+- site category
+- missing pages
+- 5 competitors
+- SEO improvements
+(JSON only)
+"""
+
+    ai_response = client.chat.completions.create(
+        model="gpt-4.1-mini",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.3
+    )
+
+    return {
+        "domain": domain,
+        "title": title,
+        "meta_description": meta_desc,
+        "h1s": h1s,
+        "analysis": ai_response.choices[0].message.content
+    }
