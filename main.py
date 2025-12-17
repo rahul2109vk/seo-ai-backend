@@ -7,7 +7,6 @@ from openai import OpenAI
 
 app = FastAPI()
 
-# Initialize OpenAI client safely
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class URLInput(BaseModel):
@@ -15,13 +14,13 @@ class URLInput(BaseModel):
 
 @app.get("/")
 def home():
-    return {"status": "Backend running with AI enabled"}
+    return {"status": "SEO AI Backend running"}
 
 @app.get("/health")
 def health():
     return {"health": "ok"}
 
-def crawl_page(url: str):
+def crawl_page(url):
     try:
         r = requests.get(
             url,
@@ -29,14 +28,16 @@ def crawl_page(url: str):
             headers={"User-Agent": "Mozilla/5.0"}
         )
         soup = BeautifulSoup(r.text, "html.parser")
+
         title = soup.title.string if soup.title else ""
         h1 = soup.find("h1").get_text() if soup.find("h1") else ""
         text = soup.get_text(separator=" ", strip=True)
+
         return title, h1, text[:4000]
     except Exception:
         return "", "", ""
 
-def ask_ai(prompt: str):
+def ask_ai(prompt):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
