@@ -20,6 +20,12 @@ def home():
 def health():
     return {"status": "ok"}
 
+@app.get("/env-check")
+def env_check():
+    return {
+        "OPENAI_API_KEY": "FOUND" if os.getenv("OPENAI_API_KEY") else "MISSING"
+    }
+
 @app.post("/analyze-site")
 def analyze_site(data: SiteRequest):
     domain = data.domain.strip()
@@ -46,4 +52,10 @@ def analyze_site(data: SiteRequest):
 You are an SEO expert.
 
 Website URL: {domain}
-Page titl
+Page title: {title}
+Meta description: {meta_desc}
+H1 headings: {h1s}
+
+1. Identify the website category/niche
+2. Suggest important missing pages
+3. Suggest 5 likely organic
