@@ -7,6 +7,7 @@ from openai import OpenAI
 
 app = FastAPI()
 
+# OpenAI client (new SDK)
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 class URLInput(BaseModel):
@@ -20,7 +21,7 @@ def home():
 def health():
     return {"health": "ok"}
 
-def crawl_page(url):
+def crawl_page(url: str):
     try:
         r = requests.get(
             url,
@@ -37,7 +38,7 @@ def crawl_page(url):
     except Exception:
         return "", "", ""
 
-def ask_ai(prompt):
+def ask_ai(prompt: str):
     try:
         response = client.chat.completions.create(
             model="gpt-4o-mini",
